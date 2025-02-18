@@ -1,0 +1,26 @@
+0 Title
+
+1 Section title
+
+2 Subsection title
+
+Paragraph text ............
+...........................
+...........................
+
+Another [paragraph] text ..
+...........................
+
+2 Subsection title
+
+# Numbered list item
+# Another item
+
+And ....
+
+* Non-numbered list item
+* Another item
+
+1 Section title
+
+.........................
