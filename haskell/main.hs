@@ -3,7 +3,7 @@ main :: IO ()
 main = do
   source <- readFile "source.txt"
   putStrLn source
-  appendFile "output.html" (source ++ "\n")
+  writeFile "output.html" source
 
 data Tokens = 
   HEADER1 | HEADER2 | HEADER3 | PARAGRAPH | BOLD | OLIST | ULIST | LISTITEM | WHITESPACE | EOF
