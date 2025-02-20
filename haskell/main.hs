@@ -1,4 +1,5 @@
 module Main where
+import Data.List (isPrefixOf)
 main :: IO ()
 main = do
   source <- readFile "source.txt"
@@ -26,24 +27,24 @@ scan source
   --create a token with the head of the text then call scan with the rest of the file
   --TODO: write cases for numbered/un-numbered lists
   --TODO: change scanner to split on tokens instead of just \n
-  | take 2 source == "0 " = 
+  | "0 " `isPrefixOf` source = 
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER1 headTxt : scan(rm_wspace (rest))
-  | take 2 source == "1 " = 
+  | "1 " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER2 headTxt : scan(rm_wspace(rest))
-  | take 2 source == "2 " = 
+  | "2 " `isPrefixOf` source = 
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER3 headTxt : scan(rm_wspace (rest))
-  | take 2 source == "# " = 
+  | "# " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in OLIST headTxt : scan(rm_wspace (rest))
-  | take 2 source == "* " = 
+  | "* " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in ULIST headTxt : scan(rm_wspace (rest))
-  | take 1 source == "[" = 
+  | "[" `isPrefixOf` source = 
       BOLDL "[" : scan(rm_wspace (drop 1 source))
-  | take 1 source == "]" = 
+  | "]" `isPrefixOf` source = 
       BOLDR "]" : scan(rm_wspace (drop 1 source))
   | otherwise = let (headTxt, rest) = break (\c -> c == '\n' || c == '[' || c == ']') source
       in PARAGRAPH headTxt : scan(rm_wspace (rest))
