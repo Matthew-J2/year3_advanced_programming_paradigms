@@ -25,7 +25,6 @@ scan source
   --if first 2 characters match, let the head and rest of the file = the current line minus the first 2 characters, 
   --and the rest of the file be the rest
   --create a token with the head of the text then call scan with the rest of the file
-  --TODO: write cases for numbered/un-numbered lists
   --TODO: change scanner to split on tokens instead of just \n
   | "0 " `isPrefixOf` source = 
       let (headTxt, rest) = break (== '\n') (drop 2 source)
