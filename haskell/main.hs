@@ -35,6 +35,12 @@ scan source
   | take 2 source == "2 " = 
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER3 headTxt : scan(rm_wspace (rest))
+  | take 2 source == "# " = 
+      let (headTxt, rest) = break (== '\n') (drop 2 source)
+      in OLIST headTxt : scan(rm_wspace (rest))
+  | take 2 source == "* " = 
+      let (headTxt, rest) = break (== '\n') (drop 2 source)
+      in ULIST headTxt : scan(rm_wspace (rest))
   | take 1 source == "[" = 
       BOLDL "[" : scan(rm_wspace (drop 1 source))
   | take 1 source == "]" = 
