@@ -13,6 +13,11 @@ data Token =
   | OLIST String | ULIST String | LISTITEM String | WHITESPACE String | EOF
   deriving(Show, Eq)
 
+data AST = 
+  Node Token [AST] --constructor for node
+  | Leaf Token --constructor for leaf
+  deriving (Show, Eq)
+
 rm_wspace :: String -> String
 rm_wspace [] = []
 rm_wspace (srch : srct)
@@ -48,3 +53,4 @@ scan source
   | otherwise = let (headTxt, rest) = break (\c -> c == '\n' || c == '[' || c == ']') source
       in PARAGRAPH headTxt : scan(rm_wspace (rest))
 
+--parse :: [Token] -> String
