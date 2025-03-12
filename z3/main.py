@@ -1,7 +1,8 @@
 from z3 import *
 import random
 
-def place_word(solver, z3_grid, word, rows, cols, trials=1000):
+#TODO: change this to constrain to a correct position instead of trying difdferent ones
+def place_word(solver, z3_grid, word, rows, cols, trials=10000):
   word_len = len(word)
   for i in range(trials):
     # Choose a random candidate placement
@@ -15,8 +16,9 @@ def place_word(solver, z3_grid, word, rows, cols, trials=1000):
     if cand_dir == 1 and cand_row + word_len > rows:
       continue
 
-    # Try the candidate
+    # Saves state (onto stack)
     solver.push()
+    # Try the candidate
     for idx, char in enumerate(word):
       if cand_dir == 0:
         r = cand_row
@@ -27,25 +29,16 @@ def place_word(solver, z3_grid, word, rows, cols, trials=1000):
       # Constrain the candidate cell to equal the character required
       solver.add(Select(z3_grid, r * cols + c) == StringVal(char))
     if solver.check() == sat:
-      solver.pop()  # candidate is valid, pop from stack
-      # Commit candidate constraints permanently
-      for idx, char in enumerate(word):
-        if cand_dir == 0:
-          r = cand_row
-          c = cand_col + idx
-        else:
-          r = cand_row + idx
-          c = cand_col
-        solver.add(Select(z3_grid, r * cols + c) == StringVal(char))
       return cand_row, cand_col, "H" if cand_dir == 0 else "V"
     else:
+      # Reverts to last saved state (from stack)
       solver.pop()  # candidate failed; try another
   return None
 
 def main():
   solver = Solver()
   # Bank of words
-  words = ("aster", "derbyshire", "cheers", "sonder", "brain", "decadent", "correspondant", "xylophone", "information", "beneficiary", "firefighter", "rhythm", "elephant", "flag", "baseball", "appoint", "sculpture", "terrace", "vampire", "love")
+  words = ("aster", "derbyshire", "cheers", "sonder", "brain", "decadent", "correspondant", "xylophone", "information", "beneficiary", "firefighter", "rhythm", "elephant", "flag", "baseball", "appoint", "sculpture", "terrace", "vampire", "love", "cheese", "tomatoes", "ketchup", "gravy", "pies", "potato", "spaghetti", "adam", "bicycle", "iphone", "theta", "cat", "dog", "greg", "bin", "man", "ham", "gig", "wig")
   #words = ("aster", "derbyshire", "cheers", "sonder", "brain", "decadent", "correspondant", "xylophone", "information", "beneficiary", "firefighter", "rhythm", "elephant", "flag")
   rows, cols = 15, 15
   z3_grid = Array("z3_grid", IntSort(), StringSort())
@@ -56,7 +49,7 @@ def main():
     if result:
       print(f"Placed {word} at {result[0]}, {result[1]}, {result[2]}")
     else:
-      print(f"Nuh uh for {word}")
+      print(f"No {word} allowed")
   
   # If sat, print output
   if solver.check() == sat:
