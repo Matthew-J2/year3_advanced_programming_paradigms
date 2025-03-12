@@ -1,42 +1,77 @@
 from z3 import *
+import random
+
+def place_word(solver, z3_grid, word, rows, cols, trials=1000):
+  word_len = len(word)
+  for i in range(trials):
+    # Choose a random candidate placement
+    cand_row = random.randint(0, rows - 1)
+    cand_col = random.randint(0, cols - 1)
+    cand_dir = random.choice([0, 1])  # 0 = horizontal 1 = vertical
+
+    # Check if the word would fit in the grid with this candidate position
+    if cand_dir == 0 and cand_col + word_len > cols:
+      continue
+    if cand_dir == 1 and cand_row + word_len > rows:
+      continue
+
+    # Try the candidate
+    solver.push()
+    for idx, char in enumerate(word):
+      if cand_dir == 0:
+        r = cand_row
+        c = cand_col + idx
+      else:
+        r = cand_row + idx
+        c = cand_col
+      # Constrain the candidate cell to equal the character required
+      solver.add(Select(z3_grid, r * cols + c) == StringVal(char))
+    if solver.check() == sat:
+      solver.pop()  # candidate is valid, pop from stack
+      # Commit candidate constraints permanently
+      for idx, char in enumerate(word):
+        if cand_dir == 0:
+          r = cand_row
+          c = cand_col + idx
+        else:
+          r = cand_row + idx
+          c = cand_col
+        solver.add(Select(z3_grid, r * cols + c) == StringVal(char))
+      return cand_row, cand_col, "H" if cand_dir == 0 else "V"
+    else:
+      solver.pop()  # candidate failed; try another
+  return None
 
 def main():
   solver = Solver()
+  # Bank of words
   words = ("aster", "derbyshire", "cheers", "sonder", "brain", "decadent", "correspondant", "xylophone", "information", "beneficiary", "firefighter", "rhythm", "elephant", "flag", "baseball", "appoint", "sculpture", "terrace", "vampire", "love")
-  z3_words = Array("strings", IntSort(), StringSort())
-  rows, cols, = 15, 15
-  grid = [[0]*cols]*rows
-  z3_grid = [[String(f"Row {j}, Col {i}") for i in range (cols)] for j in range (rows)]
-  print(z3_grid, "\n\n")
+  #words = ("aster", "derbyshire", "cheers", "sonder", "brain", "decadent", "correspondant", "xylophone", "information", "beneficiary", "firefighter", "rhythm", "elephant", "flag")
+  rows, cols = 15, 15
+  z3_grid = Array("z3_grid", IntSort(), StringSort())
 
-  steamed = "steamed"
-  hams = "hams"
-  for i in range(len(steamed)):
-    print(i, steamed[i])
-    solver.add(z3_grid[1][i] == StringVal(steamed[i]))
+  # Try to place each word in the grid
+  for word in words:
+    result = place_word(solver, z3_grid, word, rows, cols)
+    if result:
+      print(f"Placed {word} at {result[0]}, {result[1]}, {result[2]}")
+    else:
+      print(f"Nuh uh for {word}")
   
-  for i in range(len(hams)):
-    print(i, hams[i])
-    solver.add(z3_grid[i][3] == StringVal(hams[i]))
-  
-  solver.add(z3_grid[1][3] == StringVal("a"))
-  #for idx, val in enumerate(words):
-    # Add rules here
-    # Rules for a crossword problem
-    # For at least 10 (at random) words:
-    # Each word must have a letter in common 
-    # Crossword has a number of rows and columns, let's say 15x15
-    # So words must fit within this
-    # Word length must match the spaces allocated to it
-    
-  
-
+  # If sat, print output
   if solver.check() == sat:
     model = solver.model()
-    for i in range(rows):
-      print([model[z3_grid[i][j]] for j in range(cols)])
+    for r in range(rows):
+      row_output = []
+      for c in range(cols):
+        index = r * cols + c
+        # TODO: fix the grid printing e as a blank space
+        value = model.evaluate(Select(z3_grid, index), model_completion=True)
+        char = value.as_string() if value.as_string() != "" else "."
+        row_output.append(char)
+      print(" ".join(row_output))
   else:
     print("No crossword for you")
 
 if __name__ == "__main__":
-  main()
+    main()
