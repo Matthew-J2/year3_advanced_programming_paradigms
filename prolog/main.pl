@@ -4,8 +4,21 @@ assignClass(Mark, lowerSecond) :- Mark<60, Mark>=50.
 assignClass(Mark, third)       :- Mark<50, Mark>=40.
 assignClass(Mark, fail)        :- Mark<40.
 
+difficulty_range_for_class(first, 0.7, 1.0).
+difficulty_range_for_class(upperSecond, 0.5, 0.7).
+difficulty_range_for_class(lowerSecond, 0.3, 0.5).
+difficulty_range_for_class(third, 0.1, 0.3).
+difficulty_range_for_class(fail, 0.0, 0.1).
+
 :- consult('modules.pl').
 :- consult('students.pl').
+
+student_average_grade(Student, Average) :-
+    findall(Grade, grade(Student, _, Grade), Grades),
+    Grades \= [],
+    sum_list(Grades, Sum),
+    length(Grades, Count),
+    Average is Sum / Count.
 
 prerequisites_met(_, []).
 prerequisites_met(Student, [Prereq|Rest]) :-
@@ -14,10 +27,19 @@ prerequisites_met(Student, [Prereq|Rest]) :-
   Class \= fail,
   prerequisites_met(Student, Rest).
 
-recommend_next(Student, ModuleName) :-
-    module(ModuleName, _, Prerequisites, _),
+eligible_module(Student, Module, Difficulty) :-
+    module(Module, Difficulty, Prerequisites, _),
     prerequisites_met(Student, Prerequisites),
-    \+ grade(Student, ModuleName, _).  % Ensure the student has not taken it yet.
+    \+ grade(Student, Module, _),  % Ensure the student has not taken it yet.
+    student_average_grade(Student, Avg),
+    assignClass(Avg, Class),
+    difficulty_range_for_class(Class, _MinDiff, MaxDiff),
+    Difficulty =< MaxDiff.
+
+recommend_next(Student, RecommendedModule) :-
+    aggregate(max(Difficulty, Module),
+              eligible_module(Student, Module, Difficulty),
+              max(_MaxDifficulty, RecommendedModule)).
 
 
 :- dynamic grade/3.
