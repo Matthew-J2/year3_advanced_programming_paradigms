@@ -58,25 +58,31 @@ recommend_next(Student, RecommendedModule) :-
 
 :- dynamic grade/3.
 :- dynamic interest/2.
+
+add_modules(Student) :-
+    write('Enter module name (or type done to finish): '),
+    read(Module),
+    ( Module == done ->
+         true
+    ;
+         write('Enter grade for module '), write(Module), write(': '),
+         read(Grade),
+         assertz(grade(Student, Module, Grade)),
+         nl,
+         add_modules(Student)
+    ).
+
 add_student :-
     write('Enter student name (e.g., john): '),
     read(Student),
-    write('Enter module name (e.g., introduction_to_programming): '),
-    read(Module),
-    write('Enter grade (e.g., 75): '),
-    read(Grade),
-    assertz(grade(Student, Module, Grade)),
-    write('Grade added for '), write(Student), 
-    write(' in '), write(Module), 
-    write(' with grade '), write(Grade), nl,
-    
+    nl,
+    add_modules(Student),
     write('Enter an interest for the student (e.g., webdev): '),
     read(Interest),
     assertz(interest(Student, Interest)),
     nl,
-    write('Interest '), write(Interest),
-    write(' added for student'), write(Student), 
-    nl.
+    write('Student '), write(Student),
+    write(' added with interest '), write(Interest), nl.
 
 %print_recommendations([]) :- write("No suitable modules"), nl.
 
