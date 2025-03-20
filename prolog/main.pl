@@ -36,6 +36,20 @@ eligible_module(Student, Module, Difficulty) :-
     difficulty_range_for_class(Class, _MinDiff, MaxDiff),
     Difficulty =< MaxDiff.
 
+eligible_module_interest(Student, Module, Difficulty) :-
+    module(Module, Difficulty, Prerequisites, Field),
+    interest(Student, Field),
+    prerequisites_met(Student, Prerequisites),
+    \+ grade(Student, Module, _),
+    student_average_grade(Student, Avg),
+    assignClass(Avg, Class),
+    difficulty_range_for_class(Class, _MinDiff, MaxDiff),
+    Difficulty =< MaxDiff.
+
+recommend_next(Student, RecommendedModule) :-
+    aggregate(max(Difficulty, Module),
+              eligible_module_interest(Student, Module, Difficulty),
+              max(_MaxDifficulty, RecommendedModule)).
 recommend_next(Student, RecommendedModule) :-
     aggregate(max(Difficulty, Module),
               eligible_module(Student, Module, Difficulty),
