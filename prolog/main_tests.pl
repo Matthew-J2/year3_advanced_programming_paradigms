@@ -1,3 +1,4 @@
+% This code was written with the assistance of generative AI
 % Using plunit unit test library included with SWI Prolog
 :- use_module(library(plunit)).
 
