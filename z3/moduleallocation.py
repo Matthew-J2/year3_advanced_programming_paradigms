@@ -1,3 +1,4 @@
+# This code was written with the assistance of generative AI
 import random
 from z3 import *
 
@@ -29,6 +30,7 @@ def allocate_modules_z3(expertise, M):
     opt = Optimize()
 
     # Create decision variables: x[i][j] is 1 if lecturer i teaches module j, else 0.
+    # Declared as Int because it is later summed.
     x = [[Int(f"x_{i}_{j}") for j in range(nmodules)] for i in range(nlecturers)]
     
     # For each lecturer in each module
