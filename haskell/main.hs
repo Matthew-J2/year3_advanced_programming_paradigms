@@ -32,9 +32,19 @@ rm_wspace xs = xs
 trim :: String -> String
 trim = unwords . words  -- Removes leading/trailing spaces but keeps content
 
+-- Takes string, returns list of tokens
 scan :: String -> [Token]
+-- Base case, returns end of file
 scan [] = [EOF]
 scan source
+  -- isPrefixOf checks if a string starts with another string
+  -- Used with infix notation for clarity
+  -- break splits strings into a tuple of lists at a condition (e.g. at a newline character)
+  -- headTxt = before newline, rest = after newline. 
+  -- As we don't want e.g. "0 " we drop these characters from rest
+  -- Returns HEADER1 token with headTxt as its string for the head of the list, then calls
+  -- rm_wspace on the rest of the source code, and recursively calls scan on the rest of 
+  -- the source code.
   | "0 " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER1 (trim headTxt) : scan (rm_wspace rest)
@@ -50,22 +60,30 @@ scan source
   | "* " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in ULIST (trim headTxt) : scan (rm_wspace rest)
+  -- Does not break the line as bold text is terminated by a closing token
+  -- not the end of a line.
   | "[" `isPrefixOf` source = 
       BOLDL "[" : scan(rm_wspace (drop 1 source))
   | "]" `isPrefixOf` source = 
       BOLDR "]" : scan(rm_wspace (drop 1 source))
+  -- A double newline can indicate the end of a paragraph token.
+  -- The condition in the function guard checks for a double newline and for a character indicating 
+  -- a new token, then the paragraph token splits on a new line or bold text.
   | ("\n\n" `isPrefixOf` source) && not (take 2 (drop 2 source) `elem` ["0 ", "1 ", "2 ", "# ", "* "]) =
       let (headTxt, rest) = break (\c -> c == '\n' || c == '[' || c == ']') (drop 2 source)
       in PARAGRAPH (trim headTxt) : scan (rm_wspace rest)
+  -- Used for text without a token e.g. after a bold open or bold close tag in a paragraph
+  -- (a HTML paragraph tag adds a line break so has different semantics to this).
+  -- If line is empty skip it, if not then scan the remaining text and return a TEXT token
+  -- With the relevant text attached.
   | otherwise =
       let (headTxt, rest) = break (\c -> c == '\n' || c == '[' || c == ']') source
           remaining = rm_wspace rest
-      in if null headTxt
-         then case remaining of
-              [] -> [EOF]
-              (_:xs) -> scan xs  -- Skip empty lines
-         else TEXT (trim headTxt) : scan remaining
-
+      in case (null headTxt, remaining) of
+          (True, [])       -> [EOF]
+          (True, _ : xs)   -> scan xs  -- Skip empty lines
+          (False, _)       -> TEXT (trim headTxt) : scan remaining
+          
 renderHTML :: [Token] -> String
 renderHTML [] = ""
 renderHTML (HEADER1 text : xs) = "<h1>" ++ text ++ "</h1>" ++ renderHTML xs
