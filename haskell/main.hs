@@ -1,12 +1,17 @@
+-- This code was written with the assistance of generative AI
 module Main where
 import Data.List (isPrefixOf)
 import Data.Bool
 import Debug.Trace (trace)
 
 main :: IO ()
+-- Do block for I/O
+-- Reads in source file
+-- Prints tokenized source file
+-- Prints rendered html and writes it to output.html
 main = do
   source <- readFile "source.txt"
-  --putStrLn source
+  
   let scanned = scan(source)
   putStrLn (show scanned)
   putStrLn (['\n'])
@@ -16,7 +21,7 @@ main = do
 
 data Token = 
   HEADER1 String | HEADER2 String | HEADER3 String | PARAGRAPH String | BOLDL String | BOLDR String
-  | OLIST String | ULIST String | LISTITEM String | WHITESPACE String | TEXT String | EOF
+  | OLIST String | ULIST String | ENDLIST | WHITESPACE String | TEXT String | EOF
   deriving(Show, Eq)
 
 
@@ -54,12 +59,14 @@ scan source
   | "2 " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
       in HEADER3 (trim headTxt) : scan (rm_wspace rest)  
+  -- For ordered list items, delegate to scanList:
   | "# " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
-      in OLIST (trim headTxt) : scan (rm_wspace rest)
+      in OLIST (trim headTxt) : scanList (rm_wspace rest)
+  -- For unordered list items, delegate to scanList:
   | "* " `isPrefixOf` source =
       let (headTxt, rest) = break (== '\n') (drop 2 source)
-      in ULIST (trim headTxt) : scan (rm_wspace rest)
+      in ULIST (trim headTxt) : scanList (rm_wspace rest)
   -- Does not break the line as bold text is terminated by a closing token
   -- not the end of a line.
   | "[" `isPrefixOf` source = 
@@ -84,25 +91,81 @@ scan source
           (True, _ : xs)   -> scan xs  -- Skip empty lines
           (False, _)       -> TEXT (trim headTxt) : scan remaining
           
+  -- Helper function to scan inside a list.
+-- It continues consuming list items until it detects the end of the list.
+scanList :: String -> [Token]
+scanList [] = [EOF]
+scanList source
+  -- If a double newline is encountered, end the list.
+  | "\n\n" `isPrefixOf` source = ENDLIST : scan (rm_wspace (drop 2 source))
+  -- If a single newline (but not a double) is found, skip it and continue scanning.
+  | "\n" `isPrefixOf` source && not ("\n\n" `isPrefixOf` source) =
+      scanList (rm_wspace (drop 1 source))
+  -- Continue with ordered list items.
+  | "# " `isPrefixOf` source =
+      let (headTxt, rest) = break (== '\n') (drop 2 source)
+      in OLIST (trim headTxt) : scanList (rm_wspace rest)
+  -- Continue with unordered list items.
+  | "* " `isPrefixOf` source =
+      let (headTxt, rest) = break (== '\n') (drop 2 source)
+      in ULIST (trim headTxt) : scanList (rm_wspace rest)
+  -- Otherwise, the list has ended.
+  | otherwise = ENDLIST : scan source
+
 renderHTML :: [Token] -> String
 renderHTML [] = ""
 renderHTML (HEADER1 text : xs) = "<h1>" ++ text ++ "</h1>" ++ renderHTML xs
 renderHTML (HEADER2 text : xs) = "<h2>" ++ text ++ "</h2>" ++ renderHTML xs
 renderHTML (HEADER3 text : xs) = "<h3>" ++ text ++ "</h3>" ++ renderHTML xs
 
-renderHTML (PARAGRAPH text : BOLDL _ : xs) = "<p>" ++ text ++ " " ++ renderHTML (BOLDL "[" : xs)  -- Workaround for inline bolding
+renderHTML (PARAGRAPH text : BOLDL _ : xs) =
+  "<p>" ++ text ++ " " ++ renderHTML (BOLDL "[" : xs)  -- Workaround for inline bolding
 renderHTML (PARAGRAPH text : xs) = "<p>" ++ text ++ "</p>" ++ renderHTML xs
 
 renderHTML (BOLDL text : xs) = "<b>" ++ renderHTML xs
 renderHTML (BOLDR text : xs) = " </b>" ++ renderHTML xs
-renderHTML (OLIST text : xs) = "<ol><li>" ++ text ++ "</li></ol>" ++ renderHTML xs
-renderHTML (ULIST text : xs) = "<ul><li>" ++ text ++ "</li></ul>" ++ renderHTML xs
+
+-- When encountering an ordered list token, collect all consecutive list items
+renderHTML (OLIST text : xs) =
+  let (items, rest) = collectOrderedItems xs
+      listHTML = "<ol><li>" ++ text ++ "</li>" ++ concatMap (\t -> "<li>" ++ t ++ "</li>") items ++ "</ol>"
+  in listHTML ++ renderHTML rest
+
+-- When encountering an unordered list token, collect all consecutive list items
+renderHTML (ULIST text : xs) =
+  let (items, rest) = collectUnorderedItems xs
+      listHTML = "<ul><li>" ++ text ++ "</li>" ++ concatMap (\t -> "<li>" ++ t ++ "</li>") items ++ "</ul>"
+  in listHTML ++ renderHTML rest
+
 renderHTML (TEXT text : xs) = text ++ renderHTML xs
+renderHTML (ENDLIST : xs) = renderHTML xs  -- ENDLIST should be consumed by the helpers
 renderHTML (EOF : _) = ""  -- End of file, stop rendering
 renderHTML (_ : xs) = renderHTML xs  -- Ignore unknown tokens
+
+-- Collect consecutive ordered list items until an ENDLIST is reached.
+-- If the head of the list is another OLIST token, extract the text and recursively call it 
+-- on the rest of the tokens until an ENDLIST token is encountered.
+-- If any other token is encountered, stop collecting.
+collectOrderedItems :: [Token] -> ([String], [Token])
+collectOrderedItems [] = ([], [])
+collectOrderedItems (OLIST text : xs) =
+  let (restItems, rest) = collectOrderedItems xs
+  in (text : restItems, rest)
+collectOrderedItems (ENDLIST : xs) = ([], xs)
+collectOrderedItems tokens = ([], tokens)
+
+-- Similar to collectedOrderedItems but for unordered items.
+collectUnorderedItems :: [Token] -> ([String], [Token])
+collectUnorderedItems [] = ([], [])
+collectUnorderedItems (ULIST text : xs) =
+  let (restItems, rest) = collectUnorderedItems xs
+  in (text : restItems, rest)
+collectUnorderedItems (ENDLIST : xs) = ([], xs)
+collectUnorderedItems tokens = ([], tokens)
 
 -- TODO: leave marker for paragraph to close after right bold
 -- marker has to either be a number that increments and then counts how many you have left
 -- or a second inline bold in the paragraph probably breaks it
--- TODO: fix lists
+-- TODO: fix bug caused by paragraphs (but would extend to all tokens) not matching closing tags
+-- but looking for newline characters etc
 -- TODO: change renderer to include newlines in output
