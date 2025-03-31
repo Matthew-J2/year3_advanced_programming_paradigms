@@ -9,6 +9,9 @@ main :: IO ()
 -- Reads in source file
 -- Prints tokenized source file
 -- Prints rendered html and writes it to output.html
+-- source.txt contains the text included in the portfolio problem
+-- output.html when rendered by a browser should result in the 
+-- same output to that included in the portfolio problem.
 main = do
   source <- readFile "source.txt"
   
