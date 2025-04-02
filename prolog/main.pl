@@ -137,6 +137,3 @@ add_student :-
     nl,
     write('Student '), write(Student),
     write(' added with interest '), write(Interest), nl.
-
-%print_recommendations([]) :- write("No suitable modules"), nl.
-
