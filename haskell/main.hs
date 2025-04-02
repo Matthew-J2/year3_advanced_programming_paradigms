@@ -123,7 +123,7 @@ renderHTML (HEADER3 text : xs) = "<h3>" ++ text ++ "</h3>" ++ renderHTML xs
 
 renderHTML (PARAGRAPH text : BOLDL _ : xs) =
   "<p>" ++ text ++ " " ++ renderHTML (BOLDL "[" : xs)  -- Workaround for inline bolding
-renderHTML (PARAGRAPH text : xs) = "<p>" ++ text ++ "</p>" ++ renderHTML xs
+renderHTML (PARAGRAPH text : xs) = "<p>" ++ text  ++ renderHTML xs
 
 renderHTML (BOLDL text : xs) = "<b>" ++ renderHTML xs
 renderHTML (BOLDR text : xs) = " </b>" ++ renderHTML xs
