@@ -6,7 +6,7 @@ import Debug.Trace (trace)
 
 main :: IO ()
 -- Do block for I/O
--- Reads in source file
+-- Reads in source file for testing
 -- Prints tokenized source file
 -- Prints rendered html and writes it to output.html
 -- source.txt contains the text included in the portfolio problem
